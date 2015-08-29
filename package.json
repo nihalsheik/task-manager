@@ -1,0 +1,25 @@
+{
+  "name": "task-manager",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nihalsheik/task-manager.git"
+  },
+  "keywords": [
+    "task",
+    "async",
+    "runner",
+    "job"
+  ],
+  "author": "Sheik Mohideen",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nihalsheik/task-manager/issues"
+  },
+  "homepage": "https://github.com/nihalsheik/task-manager#readme"
+}
