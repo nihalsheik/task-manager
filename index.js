@@ -1,105 +1,87 @@
 /**
- * @author Sheik
- * @param ctx
+ * @author Sheik/Metron
+ * @param arr
+ * @param type
  * @constructor
  */
+function TaskManager(arr, type) {
 
-function TaskManager(ctx) {
+  arr = Array.isArray(arr) ? arr : [];
+  var ctx = null, ln = arr.length, args, index = 0;
 
-  var
-    _done = null,
-    _fns = [],
-    _fail = null,
-    _index = 0,
-    _cfg = {
-      breakOnError: true
-    };
-
-  this.context = function (context) {
+  this.context = function(context) {
     ctx = context;
     return this;
   };
 
-  this.config = function (config) {
-    for (var key in _cfg) {
-      if (config.hasOwnProperty(key)) {
-        _cfg[key] = config[key];
-      }
+  this.exec = function(cb1, cb2) {
+    if (arr.length == 0) return;
+    if (type == 1) {
+      _series(cb1);
+    } else if (type == 2) {
+      _parallel(cb1);
+    } else if (type == 3) {
+      _each(cb1, cb2);
     }
-    return this;
   };
 
-  this.finally = function (done) {
-    _done = done;
-    return this;
-  };
-
-  this.then = function (fn, args) {
-    _fns.push({fn: fn, args: args});
-    return this;
-  };
-
-  this.fail = function (fn) {
-    _fail = fn;
-    return this;
-  };
-
-  this.run = function (args) {
-    _run(args);
-  };
-
-  function next(args) {
-    _index++;
-    _run(args);
+  function _series(done) {
+    var cb = {};
+    cb.done = function() {
+      done.apply(ctx, toArgs(arguments));
+    };
+    (function next() {
+      args = toArgs(arguments);
+      if (index < ln - 1) cb.next = next; else cb.next = cb.done;
+      args.splice(0, 0, cb);
+      var fn = arr[index++];
+      if (!(fn instanceof Function)) {
+        args = args.concat(fn.args);
+        fn = fn.fn;
+      }
+      fn.apply(ctx, args);
+    })();
   }
 
-  function done(args) {
-    _done.call(ctx, args, error);
-    _index = 0;
+  function _parallel(done) {
+    arr.forEach(function(fn) {
+      fn.call(ctx, function() {
+        if (index++ == ln - 1) done.call(ctx);
+      });
+    });
   }
 
-  function error(err) {
-    if (typeof _fail === 'function') {
-      _fail.call(ctx, err);
-    } else {
-      if (_cfg.breakOnError) {
-        done(err);
+  function _each(callback, done) {
+    (function next() {
+      if (index++ == ln - 1) return done.call(ctx);
+      if (index % 1000 == 0) {
+        setTimeout(function() {
+          callback.apply(ctx, [next, arr[index], index]);
+        }, 0);
       } else {
-        next(err);
+        callback.apply(ctx, [next, arr[index], index]);
       }
-    }
+    })();
   }
 
-  //function parseArgs(args) {
-  //  var params = [];
-  //  for (var key in args) {
-  //    if (args.hasOwnProperty(key)) {
-  //      params.push(args[key]);
-  //    }
-  //  }
-  //  return params;
-  //}
-
-  function _run(args) {
-
-    if (_index > _fns.length - 1) {
-      return done(args);
+  function toArgs(p) {
+    var args = [];
+    for (var key in p) {
+      if (p.hasOwnProperty(key)) args.push(p[key]);
     }
-    //console.log('TasnRunner : running task ' + _index);
-    //args = parseArgs(args);
-    var fnObj = _fns[_index];
-
-    if (args && fnObj.args) {
-      args = [args, fnObj.args];
-    } else {
-      args = args || fnObj.args;
-    }
-    fnObj.fn.call(ctx, args, next, done, error);
-
+    return args;
   }
 
 }
 
-exports.instance = function (context) {
-  return new TaskManager(context);
+exports.series = function(arr) {
+  return new TaskManager(arr, 1);
+};
+
+exports.parallel = function(arr) {
+  return new TaskManager(arr, 2);
+};
+
+exports.each = function(arr) {
+  return new TaskManager(arr, 3);
 };
